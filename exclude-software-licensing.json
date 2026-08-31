@@ -1,0 +1,6 @@
+[
+  "*://adobe.com/*",
+  "*://*.adobe.com/*",
+  "*://autodesk.com/*",
+  "*://*.autodesk.com/*"
+]

@@ -1,0 +1,15 @@
+[
+  "*://remotedesktop.google.com/*",
+  "*://teamviewer.com/*",
+  "*://*.teamviewer.com/*",
+  "*://anydesk.com/*",
+  "*://*.anydesk.com/*",
+  "*://splashtop.com/*",
+  "*://*.splashtop.com/*",
+  "*://logmein.com/*",
+  "*://*.logmein.com/*",
+  "*://gotomypc.com/*",
+  "*://*.gotomypc.com/*",
+  "*://realvnc.com/*",
+  "*://*.realvnc.com/*"
+]

@@ -1,0 +1,14 @@
+{
+  "name": "browser-fingerprint-spoof",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capture a real browser fingerprint baseline and package it into a noise-injecting extension.",
+  "scripts": {
+    "capture": "node src/capture-fingerprint.js",
+    "obscure": "node src/obscure-fingerprint.js",
+    "build": "node src/build-extension.js"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}

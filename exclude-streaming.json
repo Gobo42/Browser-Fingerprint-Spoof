@@ -1,0 +1,14 @@
+[
+  "*://netflix.com/*",
+  "*://*.netflix.com/*",
+  "*://disneyplus.com/*",
+  "*://*.disneyplus.com/*",
+  "*://hulu.com/*",
+  "*://*.hulu.com/*",
+  "*://max.com/*",
+  "*://*.max.com/*",
+  "*://peacocktv.com/*",
+  "*://*.peacocktv.com/*",
+  "*://paramountplus.com/*",
+  "*://*.paramountplus.com/*"
+]

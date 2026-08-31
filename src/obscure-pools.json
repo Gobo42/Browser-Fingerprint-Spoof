@@ -1,0 +1,38 @@
+{
+  "gpuPool": [
+    { "unmaskedVendor": "Google Inc. (Intel)", "unmaskedRenderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics, Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "unmaskedVendor": "Google Inc. (Intel)", "unmaskedRenderer": "ANGLE (Intel, Intel(R) UHD Graphics 630, Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "unmaskedVendor": "Google Inc. (AMD)", "unmaskedRenderer": "ANGLE (AMD, AMD Radeon RX 6600 XT Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "unmaskedVendor": "Google Inc. (AMD)", "unmaskedRenderer": "ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "unmaskedVendor": "Google Inc. (NVIDIA)", "unmaskedRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "unmaskedVendor": "Google Inc. (NVIDIA)", "unmaskedRenderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)" }
+  ],
+  "maxTextureSizePool": [4096, 8192, 16384, 32768],
+  "defaultExtensions": [
+    "ANGLE_instanced_arrays", "EXT_blend_minmax", "EXT_clip_control",
+    "EXT_color_buffer_half_float", "EXT_depth_clamp", "EXT_float_blend",
+    "EXT_frag_depth", "EXT_polygon_offset_clamp", "EXT_sRGB",
+    "EXT_shader_texture_lod", "EXT_texture_filter_anisotropic",
+    "EXT_texture_mirror_clamp_to_edge", "KHR_parallel_shader_compile",
+    "OES_element_index_uint", "OES_fbo_render_mipmap", "OES_standard_derivatives",
+    "OES_texture_float", "OES_texture_float_linear", "OES_texture_half_float",
+    "OES_texture_half_float_linear", "OES_vertex_array_object",
+    "WEBGL_blend_func_extended", "WEBGL_color_buffer_float",
+    "WEBGL_compressed_texture_s3tc", "WEBGL_compressed_texture_s3tc_srgb",
+    "WEBGL_debug_renderer_info", "WEBGL_depth_texture", "WEBGL_draw_buffers",
+    "WEBGL_lose_context", "WEBGL_polygon_mode"
+  ],
+  "hardwareConcurrencyPool": [4, 6, 8, 12, 16, 20, 24, 32],
+  "deviceMemoryPool": [2, 4, 8, 16, 32],
+  "screenPool": [
+    { "width": 1366, "height": 768, "devicePixelRatio": 1 },
+    { "width": 1440, "height": 900, "devicePixelRatio": 1 },
+    { "width": 1536, "height": 864, "devicePixelRatio": 1.25 },
+    { "width": 1600, "height": 900, "devicePixelRatio": 1 },
+    { "width": 1920, "height": 1080, "devicePixelRatio": 1 },
+    { "width": 1920, "height": 1200, "devicePixelRatio": 1 },
+    { "width": 2048, "height": 1152, "devicePixelRatio": 1.25 },
+    { "width": 2560, "height": 1440, "devicePixelRatio": 1 },
+    { "width": 2560, "height": 1440, "devicePixelRatio": 1.5 }
+  ]
+}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: system-ui, sans-serif; width: 320px; padding: 12px; }
+  h1 { font-size: 13px; margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 0.03em; color: #444; }
+  h1:first-child { margin-top: 0; }
+  .site { font-size: 12px; color: #555; word-break: break-all; margin-bottom: 8px; }
+  .origin-card { border: 1px solid #ddd; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px; }
+  .origin-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+  .origin-name { font-size: 11px; font-weight: 600; word-break: break-all; }
+  .origin-head button { font-size: 10px; padding: 2px 6px; flex-shrink: 0; }
+  .counts { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 11px; }
+  .counts span:nth-child(even) { font-weight: 600; text-align: right; }
+  button { cursor: pointer; }
+  .primary { width: 100%; padding: 6px; margin-bottom: 4px; }
+  .primary.secondary { background: #fff; border: 1px solid #999; margin-bottom: 10px; }
+  ul { list-style: none; padding: 0; margin: 0 0 8px; max-height: 160px; overflow-y: auto; }
+  li { display: flex; gap: 4px; margin-bottom: 4px; }
+  li input { flex: 1; font-size: 11px; padding: 3px 4px; }
+  li button { font-size: 11px; }
+  .add-row { display: flex; gap: 4px; }
+  .add-row input { flex: 1; font-size: 11px; padding: 3px 4px; }
+  .hint { font-size: 10px; color: #888; margin-top: 6px; line-height: 1.4; }
+  .empty { font-size: 11px; color: #999; padding: 4px 0; }
+  .tabs { display: flex; border-bottom: 1px solid #ddd; margin-top: 14px; }
+  .tab-btn { flex: 1; background: none; border: none; padding: 6px 2px; font-size: 11px;
+    text-transform: uppercase; color: #888; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab-btn.active { border-bottom-color: #8855ee; color: #222; font-weight: 600; }
+  .tab-panel { padding-top: 8px; }
+  .tab-panel[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <h1>Fingerprint Noise</h1>
+  <div class="site" id="site">Loading...</div>
+  <button class="primary" id="excludeBtn">Exclude this site &amp; reload</button>
+  <button class="primary secondary" id="hardblockBtn">Hard-block audio on this site &amp; reload</button>
+
+  <h1>Activity on this page</h1>
+  <div id="origins"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabExcludeBtn" data-tab="exclude">Excluded</button>
+    <button class="tab-btn" id="tabHardblockBtn" data-tab="hardblock">Hard-blocked</button>
+  </div>
+
+  <div class="tab-panel" id="excludePanel">
+    <ul id="excludeListEl"></ul>
+    <div class="add-row">
+      <input id="newExcludePattern" placeholder="*://example.com/*">
+      <button id="addExcludeBtn">Add</button>
+    </div>
+    <div class="hint">
+      No spoofing at all on these sites — real values everywhere.
+    </div>
+  </div>
+
+  <div class="tab-panel" id="hardblockPanel" hidden>
+    <ul id="hardblockListEl"></ul>
+    <div class="add-row">
+      <input id="newHardblockPattern" placeholder="*://example.com/*">
+      <button id="addHardblockBtn">Add</button>
+    </div>
+    <div class="hint">
+      On these sites, real-time <code>AudioContext</code> is replaced with a
+      fake one entirely — no live audio session is ever opened, which is what
+      actually stops things like Bluetooth interference, not just the
+      fingerprint. Independent of the exclude list: a site can be spoofed,
+      excluded, hard-blocked, or any combination.
+    </div>
+  </div>
+
+  <div class="hint">
+    Changes take effect on the next page load in a tab — reload an open tab
+    (or use a button above) to apply. Patterns use Chrome's match-pattern
+    syntax, e.g. <code>*://*.example.com/*</code> for all subdomains.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
