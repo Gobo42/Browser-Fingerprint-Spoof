@@ -19,10 +19,6 @@ const HARDBLOCK_ID = 'fp-audio-hardblock';
 
 const callCounts = new Map(); // tabId -> Map<origin, counts>  (origin covers the top frame AND any iframes on that tab)
 
-function emptyCounts() {
-  return { getImageData: 0, toDataURL: 0, getParameter: 0, webglExtensions: 0, getChannelData: 0, analyser: 0, canPlayType: 0, rtc: 0, audioContextFaked: 0 };
-}
-
 function originOf(sender) {
   if (sender.origin) return sender.origin;
   try { return new URL(sender.url).origin; } catch (e) { return 'unknown'; }
@@ -132,7 +128,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       perTab = new Map();
       callCounts.set(tabId, perTab);
     }
-    const counts = perTab.get(origin) || emptyCounts();
+    const counts = perTab.get(origin) || {};
     counts[msg.method] = (counts[msg.method] || 0) + 1;
     perTab.set(origin, counts);
 

@@ -7,6 +7,10 @@
   const report = (method) => {
     try { window.postMessage({ channel: CHANNEL, method }, window.location.origin); } catch (e) {}
   };
+  const defineGetter = (target, prop, value) => {
+    if (value === undefined || value === null) return;
+    try { Object.defineProperty(target, prop, { get: () => value, configurable: true }); } catch (e) {}
+  };
 
   if (base.canvasImageData) {
     CanvasRenderingContext2D.prototype.getImageData = function (x, y, w, h) {
@@ -155,47 +159,30 @@
   // just replacing one static value with another.
   if (base.navigatorInfo) {
     const nav = base.navigatorInfo;
-    const defineNav = (prop, value) => {
-      if (value === undefined || value === null) return;
-      try {
-        Object.defineProperty(Navigator.prototype, prop, { get: () => value, configurable: true });
-      } catch (e) {}
-    };
-    defineNav('hardwareConcurrency', nav.hardwareConcurrency);
-    defineNav('deviceMemory', nav.deviceMemory);
+    defineGetter(Navigator.prototype, 'hardwareConcurrency', nav.hardwareConcurrency);
+    defineGetter(Navigator.prototype, 'deviceMemory', nav.deviceMemory);
     // userAgent/platform are captured and served for completeness, but see
     // the README caveat: overriding these here does NOT change the real
     // HTTP User-Agent header sent with requests, so editing them away from
     // your real values creates a JS-vs-header mismatch that some anti-bot
     // systems specifically check for. Leave these two as captured (real)
     // unless you also rewrite the header (see README).
-    defineNav('userAgent', nav.userAgent);
-    defineNav('platform', nav.platform);
+    defineGetter(Navigator.prototype, 'userAgent', nav.userAgent);
+    defineGetter(Navigator.prototype, 'platform', nav.platform);
   }
 
   if (base.screenInfo) {
     const scr = base.screenInfo;
-    const defineScreen = (prop, value) => {
-      if (value === undefined || value === null) return;
-      try {
-        Object.defineProperty(Screen.prototype, prop, { get: () => value, configurable: true });
-      } catch (e) {}
-    };
-    defineScreen('colorDepth', scr.colorDepth);
-    defineScreen('pixelDepth', scr.pixelDepth);
+    defineGetter(Screen.prototype, 'colorDepth', scr.colorDepth);
+    defineGetter(Screen.prototype, 'pixelDepth', scr.pixelDepth);
     // width/height/availWidth/availHeight are pure reporting: unlike
     // window.innerWidth/innerHeight, CSS layout never reads screen.*, so
     // there's no visual side effect from overriding these.
-    defineScreen('width', scr.width);
-    defineScreen('height', scr.height);
-    defineScreen('availWidth', scr.availWidth);
-    defineScreen('availHeight', scr.availHeight);
-
-    if (scr.devicePixelRatio !== undefined && scr.devicePixelRatio !== null) {
-      try {
-        Object.defineProperty(window, 'devicePixelRatio', { get: () => scr.devicePixelRatio, configurable: true });
-      } catch (e) {}
-    }
+    defineGetter(Screen.prototype, 'width', scr.width);
+    defineGetter(Screen.prototype, 'height', scr.height);
+    defineGetter(Screen.prototype, 'availWidth', scr.availWidth);
+    defineGetter(Screen.prototype, 'availHeight', scr.availHeight);
+    defineGetter(window, 'devicePixelRatio', scr.devicePixelRatio);
   }
 
   // navigator.plugins/mimeTypes: always report empty, regardless of what's

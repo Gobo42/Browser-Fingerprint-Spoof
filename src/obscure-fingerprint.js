@@ -47,33 +47,8 @@ const pickDifferent = (arr, current) => {
   return choices.length ? pick(choices) : pick(arr);
 };
 
-// All obscuring pools/lists are decoupled from this logic into
-// obscure-pools.json, so they can be reviewed/edited independently of the
-// code that uses them.
-//
-// - gpuPool: kept Windows/D3D11-plausible (ANGLE backend) since
-//   navigatorInfo.platform is deliberately left as your real "Win32",
-//   pairing a Windows platform with a macOS Metal-style renderer string
-//   would itself be an inconsistency a fingerprinter could flag. If you
-//   edit platform to something else, update this pool to match.
-// - defaultExtensions: fixed, canonical WebGL extensions list, wholesale
-//   replaces whatever was captured, every run, regardless of machine or
-//   seed. Sourced from a real verified capture (a genuine Windows/ANGLE/
-//   D3D11 Chrome session) with the GPU/driver-variable extensions (timer
-//   queries, some compressed-texture formats, etc.) removed, not
-//   fabricated, but also not tied to any one user's machine any more, so
-//   every install of this tool reports the same list. Deliberate:
-//   consistency across installs is the goal here, not per-user uniqueness.
-// - deviceMemoryPool: navigator.deviceMemory is spec-quantized to exactly
-//   these values; Chrome will never report anything else, so anything
-//   outside this set is itself a tell that the value was hand-edited
-//   rather than real.
-// - screenPool: common real-world (logical width, logical height,
-//   devicePixelRatio) combinations. screen.width/height already reflect
-//   Windows DPI scaling (physical pixels / scale factor), so each entry is
-//   a genuine physical-monitor-plus-scale-factor combo, not an arbitrary
-//   pairing; e.g. a 1920x1080 panel at 125% scaling reports logical
-//   1536x864 with devicePixelRatio 1.25, not 1920x1080 at 1.25.
+// Pool formats and realism constraints are documented in obscure-pools.md;
+// the fixed WebGL-extension rationale also lives in TECHNICAL.md.
 const pools = JSON.parse(fs.readFileSync(path.join(__dirname, 'obscure-pools.json'), 'utf8'));
 const {
   gpuPool: GPU_POOL,

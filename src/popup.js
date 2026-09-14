@@ -14,14 +14,10 @@ const LABELS = {
   rtc: 'WebRTC (peer connections)',
 };
 
-function patternForHost(host, includeSubdomains) {
-  return includeSubdomains ? `*://*.${host}/*` : `*://${host}/*`;
-}
-
 // Extracts the host from a pattern shaped like *://*.HOST/*, the only
-// shape patternForHost(..., true) ever produces. Manually-typed patterns of
-// other shapes just won't match here, which is fine; this is only used to
-// detect redundancy against the quick-action buttons' own output.
+// shape the quick-action buttons produce. Manually-typed patterns of other
+// shapes just won't match here, which is fine; this is only used to detect
+// redundancy against the quick-action buttons' own output.
 function hostFromWildcardPattern(pattern) {
   const m = /^\*:\/\/\*\.(.+)\/\*$/.exec(pattern);
   return m ? m[1] : null;
@@ -37,11 +33,6 @@ function isHostAlreadyCovered(host, list) {
     if (!existingHost) return false;
     return host === existingHost || host.endsWith('.' + existingHost);
   });
-}
-
-async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
 }
 
 function safeParseUrl(str) {
@@ -181,7 +172,7 @@ async function addOriginToList(origin, which) {
   // www.aliexpress.us when *://*.aliexpress.us/* is already in the list):
   // nothing to add, just reload so the existing coverage takes effect.
   if (!isHostAlreadyCovered(url.hostname, list)) {
-    const pattern = patternForHost(url.hostname, true);
+    const pattern = `*://*.${url.hostname}/*`;
     if (which === 'exclude') {
       if (!excludeList.includes(pattern)) await saveExcludeList([...excludeList, pattern]);
     } else {
@@ -193,7 +184,7 @@ async function addOriginToList(origin, which) {
 }
 
 async function init() {
-  activeTab = await getActiveTab();
+  [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = activeTab && activeTab.url ? safeParseUrl(activeTab.url) : null;
   document.getElementById('site').textContent = url ? url.hostname : '(no active tab URL)';
 
