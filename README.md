@@ -240,6 +240,14 @@ trigger re-verification or get flagged:
   categories here, this isn't just extra friction: confirmed in practice
   that a spoofed fingerprint can stop the Cloudflare widget from completing
   at all, not just make it more suspicious.
+- **AliExpress's own captcha iframe** (`login.aliexpress.com`,
+  `login.aliexpress.us`): a first-party version of the same problem, not a
+  third-party vendor domain. AliExpress's own risk-scoring can pop this as
+  an interstitial on any page, not just login, and confirmed from a HAR
+  capture that it renders its slider-puzzle image via `html2canvas`, which
+  reads the canvas back with the same `getImageData`/`toDataURL` calls this
+  tool spoofs, so the puzzle came back unsolvable rather than just
+  triggering more often.
 
 ### Bot-heavy checkout and ticketing sites
 
