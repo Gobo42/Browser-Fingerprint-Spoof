@@ -183,8 +183,8 @@ values, so it's the normal way to rotate to a new fake identity over time.
 
 Some sites (Microsoft Teams was the motivating example) depend on real
 canvas/WebGL/audio/WebRTC behavior and break if this extension spoofs those
-APIs on them. Two independent lists, both editable live from the toolbar
-popup, no rebuild required:
+APIs on them. Two lists, both editable live from the toolbar popup, no
+rebuild required:
 
 - **Exclude list**: no spoofing at all on these sites, real values
   everywhere.
@@ -192,13 +192,22 @@ popup, no rebuild required:
   `AudioContext` is replaced with a fake one entirely, so no live audio
   session ever opens (AliExpress is pre-seeded here by default).
 
+Excluding a site also removes any hard-block entry for it (and for its
+subdomains), since "real values everywhere" and "actively fake
+`AudioContext`" contradict each other; hard-blocking a site doesn't remove
+an exclude entry the other way around.
+
 The popup also shows a live "Activity on this page" breakdown: which
 fingerprinting APIs have actually been called on the current tab, broken
 down per origin (including iframes), with quick Exclude/Hard-block
 buttons right next to each one.
 
 A site can be spoofed (the default), excluded, hard-blocked, or any
-combination. See [TECHNICAL.md](TECHNICAL.md#per-site-management-toolbar-popup-and-per-origin-activity)
+combination. Local/private-network hosts (RFC 1918, loopback, and `*.local`,
+e.g. a router admin page or a browser-based VM console) are never spoofed,
+automatically, with no list entry needed; see
+[TECHNICAL.md](TECHNICAL.md#runtime-behavior-no-native-calls-at-serve-time)
+for why. See [TECHNICAL.md](TECHNICAL.md#per-site-management-toolbar-popup-and-per-origin-activity)
 for the full mechanism, including why some CDN-hosted script domains don't
 need their own list entries.
 
@@ -223,6 +232,14 @@ trigger re-verification or get flagged:
   state tax portal in one pattern) plus `id.me`, which many government
   agencies delegate identity verification to. Same reasoning as the identity
   providers above, just as strong.
+- **CAPTCHA/bot-challenge widgets**: Cloudflare Turnstile
+  (`challenges.cloudflare.com`), Google reCAPTCHA
+  (`google.com/recaptcha`, `recaptcha.net`), and hCaptcha
+  (`newassets.hcaptcha.com`). These run their own
+  fingerprint checks as part of the challenge itself, and unlike the other
+  categories here, this isn't just extra friction: confirmed in practice
+  that a spoofed fingerprint can stop the Cloudflare widget from completing
+  at all, not just make it more suspicious.
 
 ### Bot-heavy checkout and ticketing sites
 

@@ -14,6 +14,8 @@
 // (it never touches real hardware) and its AnalyserNode/AudioBuffer reads
 // are already covered by content.js's prototype overrides.
 (function () {
+  __FP_PRIVATE_HOST_GUARD__
+
   const CHANNEL = '__FP_CHANNEL__';
   const base = __FP_DATASET__;
   const report = (method) => {
@@ -26,9 +28,10 @@
   if (!Real) return;
 
   const seed = Math.random();
-  const noise = (i) => Math.sin(seed * 9999 + i) * 0.5 * 0.0003;
   const freqSrc = base.analyserFrequencyData || [];
   const timeSrc = base.analyserTimeDomainData || [];
+
+  __FP_ANALYSER_HELPERS__
 
   class FakeAudioParam {
     constructor(value) { this.value = value; this.defaultValue = value; }
@@ -55,26 +58,19 @@
     }
     getFloatFrequencyData(array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) array[i] = (freqSrc[i % freqSrc.length] || -100) + noise(i) * 1000;
+      __fpFillFreqData(array, freqSrc, seed);
     }
     getByteFrequencyData(array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) {
-        const db = (freqSrc[i % freqSrc.length] || -100) + noise(i) * 1000;
-        const scaled = ((db - this.minDecibels) / (this.maxDecibels - this.minDecibels)) * 255;
-        array[i] = Math.max(0, Math.min(255, Math.round(scaled)));
-      }
+      __fpFillByteFreqData(array, freqSrc, seed, this.minDecibels, this.maxDecibels);
     }
     getFloatTimeDomainData(array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) array[i] = (timeSrc[i % timeSrc.length] || 0) + noise(i);
+      __fpFillTimeData(array, timeSrc, seed);
     }
     getByteTimeDomainData(array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) {
-        const v = (timeSrc[i % timeSrc.length] || 0) + noise(i);
-        array[i] = Math.max(0, Math.min(255, Math.round(128 + 128 * v)));
-      }
+      __fpFillByteTimeData(array, timeSrc, seed);
     }
   }
 

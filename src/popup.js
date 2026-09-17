@@ -35,6 +35,15 @@ function isHostAlreadyCovered(host, list) {
   });
 }
 
+// True if `host` is already on `list` one way or another: a broader
+// wildcard entry covering it (isHostAlreadyCovered), or an exact entry for
+// it in either shape (*://*.HOST/* or the bare *://HOST/*, e.g. the seeded
+// teams.microsoft.com entries use both). Used to grey out a quick-action
+// button once it'd be a no-op.
+function isHostExcluded(host, list) {
+  return list.includes(`*://*.${host}/*`) || list.includes(`*://${host}/*`) || isHostAlreadyCovered(host, list);
+}
+
 function safeParseUrl(str) {
   try { return new URL(str); } catch (e) { return null; }
 }
@@ -66,13 +75,25 @@ function renderOrigins(origins) {
     name.className = 'origin-name';
     name.textContent = origin;
 
+    const originHost = (safeParseUrl(origin) || {}).hostname;
+
     const excludeOriginBtn = document.createElement('button');
-    excludeOriginBtn.textContent = 'Exclude';
-    excludeOriginBtn.addEventListener('click', () => addOriginToList(origin, 'exclude'));
+    if (originHost && isHostExcluded(originHost, excludeList)) {
+      excludeOriginBtn.textContent = 'Excluded';
+      excludeOriginBtn.disabled = true;
+    } else {
+      excludeOriginBtn.textContent = 'Exclude';
+      excludeOriginBtn.addEventListener('click', () => addOriginToList(origin, 'exclude'));
+    }
 
     const hardblockOriginBtn = document.createElement('button');
-    hardblockOriginBtn.textContent = 'Hard-block audio';
-    hardblockOriginBtn.addEventListener('click', () => addOriginToList(origin, 'hardblock'));
+    if (originHost && isHostExcluded(originHost, hardblockList)) {
+      hardblockOriginBtn.textContent = 'Hard-blocked';
+      hardblockOriginBtn.disabled = true;
+    } else {
+      hardblockOriginBtn.textContent = 'Hard-block audio';
+      hardblockOriginBtn.addEventListener('click', () => addOriginToList(origin, 'hardblock'));
+    }
 
     head.appendChild(name);
     head.appendChild(excludeOriginBtn);
@@ -96,15 +117,20 @@ function renderOrigins(origins) {
   }
 }
 
-// Sort key for a pattern: the host portion (with any leading "*." wildcard
-// stripped), lowercased. Falls back to the raw pattern for anything that
-// doesn't parse as scheme://host/path, still sorts deterministically,
-// just not necessarily "by domain" for exotic manually-typed patterns.
-function patternSortKey(pattern) {
+// Host portion of a pattern (any leading "*." wildcard stripped), or null
+// for anything that doesn't parse as scheme://host/path.
+function hostFromPattern(pattern) {
   const m = /^[^:]*:\/\/([^/]+)\//.exec(pattern);
-  if (!m) return pattern.toLowerCase();
-  const host = m[1].startsWith('*.') ? m[1].slice(2) : m[1];
-  return host.toLowerCase();
+  if (!m) return null;
+  return m[1].startsWith('*.') ? m[1].slice(2) : m[1];
+}
+
+// Sort key for a pattern: its host, lowercased. Falls back to the raw
+// pattern for anything hostFromPattern can't parse, still sorts
+// deterministically, just not necessarily "by domain" for exotic
+// manually-typed patterns.
+function patternSortKey(pattern) {
+  return (hostFromPattern(pattern) || pattern).toLowerCase();
 }
 
 // Generic renderer for an editable pattern list (shared by exclude + hardblock).
@@ -149,11 +175,38 @@ function updateTabLabel(btnId, baseLabel, count) {
   document.getElementById(btnId).textContent = `${baseLabel} (${count})`;
 }
 
+// True if `existingHost` is at or under `host` -- i.e. excluding `host`
+// should also cover it (a hard-block entry for the same host, or for a
+// subdomain of it).
+function isHostWithin(existingHost, host) {
+  return existingHost === host || existingHost.endsWith('.' + host);
+}
+
+// Removes any hard-block entries for a host that was just added to the
+// exclude list. "Excluded" (real values everywhere) and "hard-blocked"
+// (actively fake AudioContext) contradict each other for the same site, so
+// excluding wins and clears the hard-block side rather than leaving both
+// active at once.
+async function pruneHardblockForHost(host) {
+  const remaining = hardblockList.filter((pattern) => {
+    const h = hostFromPattern(pattern);
+    return !(h && isHostWithin(h, host));
+  });
+  if (remaining.length !== hardblockList.length) await saveHardblockList(remaining);
+}
+
 async function saveExcludeList(list) {
+  const addedHosts = list
+    .filter((p) => !excludeList.includes(p))
+    .map(hostFromPattern)
+    .filter(Boolean);
+
   await chrome.runtime.sendMessage({ type: 'setExcludeList', list });
   excludeList = list;
   renderPatternList('excludeListEl', excludeList, saveExcludeList);
   updateTabLabel('tabExcludeBtn', 'Excluded', excludeList.length);
+
+  for (const host of addedHosts) await pruneHardblockForHost(host);
 }
 
 async function saveHardblockList(list) {
@@ -188,16 +241,19 @@ async function init() {
   const url = activeTab && activeTab.url ? safeParseUrl(activeTab.url) : null;
   document.getElementById('site').textContent = url ? url.hostname : '(no active tab URL)';
 
+  // Loaded before renderOrigins/the quick-action buttons below, since both
+  // need the lists already in hand to grey out a button that'd be a no-op.
+  excludeList = (await chrome.runtime.sendMessage({ type: 'getExcludeList' })) || [];
+  hardblockList = (await chrome.runtime.sendMessage({ type: 'getHardblockList' })) || [];
+
   const origins = activeTab
     ? await chrome.runtime.sendMessage({ type: 'getCallCounts', tabId: activeTab.id })
     : {};
   renderOrigins(origins || {});
 
-  excludeList = (await chrome.runtime.sendMessage({ type: 'getExcludeList' })) || [];
   renderPatternList('excludeListEl', excludeList, saveExcludeList);
   updateTabLabel('tabExcludeBtn', 'Excluded', excludeList.length);
 
-  hardblockList = (await chrome.runtime.sendMessage({ type: 'getHardblockList' })) || [];
   renderPatternList('hardblockListEl', hardblockList, saveHardblockList);
   updateTabLabel('tabHardblockBtn', 'Hard-blocked', hardblockList.length);
 
@@ -206,9 +262,20 @@ async function init() {
   if (!url) {
     excludeBtn.disabled = true;
     hardblockBtn.disabled = true;
+  } else {
+    if (isHostExcluded(url.hostname, excludeList)) {
+      excludeBtn.disabled = true;
+      excludeBtn.textContent = 'Already excluded';
+    } else {
+      excludeBtn.addEventListener('click', () => addOriginToList(url.origin, 'exclude'));
+    }
+    if (isHostExcluded(url.hostname, hardblockList)) {
+      hardblockBtn.disabled = true;
+      hardblockBtn.textContent = 'Already hard-blocked';
+    } else {
+      hardblockBtn.addEventListener('click', () => addOriginToList(url.origin, 'hardblock'));
+    }
   }
-  excludeBtn.addEventListener('click', () => addOriginToList(url.origin, 'exclude'));
-  hardblockBtn.addEventListener('click', () => addOriginToList(url.origin, 'hardblock'));
 
   document.getElementById('addExcludeBtn').addEventListener('click', async () => {
     const input = document.getElementById('newExcludePattern');

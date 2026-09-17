@@ -18,6 +18,30 @@ mechanism itself.
 
 ## Runtime behavior: no native calls at serve time
 
+Before any of the overrides below install, both `content.js` and
+`audio-hardblock.js` (via the shared
+[`private-host-guard.snippet.js`](src/templates/private-host-guard.snippet.js))
+check `window.location.hostname` against a regex covering RFC 1918
+(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`,
+`::1`, `localhost`/`*.localhost`), and mDNS `*.local` hostnames, and return
+immediately, unpatched, if it matches. This is unconditional, not a
+popup-managed list entry, because of a platform constraint: both scripts
+run in the page's MAIN world at `document_start` so their prototype patches
+land before the page's own scripts can read the real values, and
+MAIN-world scripts have no `chrome.runtime`/`chrome.storage` access (see
+"How call detection works" below for why `bridge.js` exists at all).
+`chrome.storage.local.get()` is always async, so there's no way to gate
+this on a live-toggleable setting without introducing a wait that would
+let the page's real fingerprinting code run first, defeating the override.
+A build-time-only toggle was possible but not worth the complexity:
+there's no real case for wanting spoofing *on* against your own LAN, and
+canvas/WebGL-readback consoles (a browser-based VM/VNC viewer, for
+instance) would otherwise get served fake pixels for what they just drew.
+The regex only matches a bare hostname shape (an IPv4 literal, `::1`,
+`localhost`, or a `*.local`/`*.localhost` suffix); a private-network
+hostname that doesn't fit one of those shapes (a custom internal DNS name,
+say) isn't detectable from page JS and isn't covered.
+
 The overridden methods below are never removed, stubbed to throw, or left
 `undefined`; each one stays fully present and returns a normal-shaped
 value on every call, same as it would for a page nobody is intercepting.
@@ -203,12 +227,18 @@ does nothing if both are absent.
 
 For sites where you want to go further than data-spoofing (AliExpress,
 given the above, is the seeded default in `hardblock-list.json`), there's a
-second list, fully independent of the exclude list, managed the same way
-from the popup ("Hard-block audio on this site & reload", plus a
-per-origin button in the "Activity on this page" breakdown, plus the
-editable "Hard-blocked (audio) sites" list). A site can be spoofed,
-excluded, hard-blocked, or any combination of these; the two lists don't
-interact.
+second list, managed the same way from the popup ("Hard-block audio on
+this site & reload", plus a per-origin button in the "Activity on this
+page" breakdown, plus the editable "Hard-blocked (audio) sites" list). A
+site can be spoofed, excluded, hard-blocked, or spoofed-and-hard-blocked
+(AliExpress's own combination); the one contradictory pairing, excluded
+(real values everywhere) plus hard-blocked (an actively faked
+`AudioContext`) at the same time, isn't allowed to persist: the popup's
+`saveExcludeList` prunes any hard-block entry for a host (or a subdomain of
+it) the moment that host is added to the exclude list, whichever way it
+got added (a quick-action button, the manual pattern field, or editing an
+existing entry in place). It only runs in that direction, hard-blocking an
+already-excluded site doesn't clear the exclude entry back out.
 
 On a hard-blocked site, `audio-hardblock.js` replaces `window.AudioContext`
 (and `webkitAudioContext`) with a **fully functional fake**: real method

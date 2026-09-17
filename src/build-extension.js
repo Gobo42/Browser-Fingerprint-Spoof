@@ -83,10 +83,25 @@ seedList(hardblockListPaths, 'hardblock-list.json');
 // audio-hardblock.js (MAIN world, fake AudioContext on hard-blocked sites)
 // share one build-time-random channel token so bridge.js only reacts to
 // messages from our own scripts, not arbitrary page postMessage traffic.
+// AnalyserNode fake-data fill logic is shared source between content.js and
+// audio-hardblock.js (both fake the same four read methods, on real vs. fake
+// AnalyserNode instances respectively), spliced into each via this token so
+// there's one copy to maintain instead of two.
+const analyserHelpers = fs.readFileSync(path.join(TEMPLATES_DIR, 'analyser-fake.snippet.js'), 'utf8');
+
+// Same idea for the private-host (RFC 1918/loopback/*.local) early-return
+// guard: both MAIN-world scripts need the identical check at the very top,
+// before they patch anything.
+const privateHostGuard = fs.readFileSync(path.join(TEMPLATES_DIR, 'private-host-guard.snippet.js'), 'utf8');
+
 const contentTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'content.template.js'), 'utf8');
 fs.writeFileSync(
   path.join(outputDir, 'content.js'),
-  contentTemplate.replace('__FP_DATASET__', JSON.stringify(dataset)).replace(/__FP_CHANNEL__/g, channel)
+  contentTemplate
+    .replace('__FP_DATASET__', JSON.stringify(dataset))
+    .replace(/__FP_CHANNEL__/g, channel)
+    .replace('__FP_ANALYSER_HELPERS__', analyserHelpers)
+    .replace('__FP_PRIVATE_HOST_GUARD__', privateHostGuard)
 );
 
 const bridgeTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'bridge.template.js'), 'utf8');
@@ -98,7 +113,11 @@ fs.writeFileSync(
 const hardblockTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'audio-hardblock.template.js'), 'utf8');
 fs.writeFileSync(
   path.join(outputDir, 'audio-hardblock.js'),
-  hardblockTemplate.replace('__FP_DATASET__', JSON.stringify(dataset)).replace(/__FP_CHANNEL__/g, channel)
+  hardblockTemplate
+    .replace('__FP_DATASET__', JSON.stringify(dataset))
+    .replace(/__FP_CHANNEL__/g, channel)
+    .replace('__FP_ANALYSER_HELPERS__', analyserHelpers)
+    .replace('__FP_PRIVATE_HOST_GUARD__', privateHostGuard)
 );
 
 console.log(`Extension built -> ${outputDir}`);

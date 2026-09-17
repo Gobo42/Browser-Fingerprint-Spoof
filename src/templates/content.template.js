@@ -1,4 +1,6 @@
 (function () {
+  __FP_PRIVATE_HOST_GUARD__
+
   const base = __FP_DATASET__;
   const CHANNEL = '__FP_CHANNEL__';
   const seed = Math.random();
@@ -11,6 +13,8 @@
     if (value === undefined || value === null) return;
     try { Object.defineProperty(target, prop, { get: () => value, configurable: true }); } catch (e) {}
   };
+
+  __FP_ANALYSER_HELPERS__
 
   if (base.canvasImageData) {
     CanvasRenderingContext2D.prototype.getImageData = function (x, y, w, h) {
@@ -100,35 +104,22 @@
 
     AnalyserNode.prototype.getFloatFrequencyData = function (array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) {
-        array[i] = (freqSrc[i % freqSrc.length] || -100) + noise(i) * 1000;
-      }
+      __fpFillFreqData(array, freqSrc, seed);
     };
 
     AnalyserNode.prototype.getByteFrequencyData = function (array) {
       report('analyser');
-      const minDb = this.minDecibels;
-      const maxDb = this.maxDecibels;
-      for (let i = 0; i < array.length; i++) {
-        const db = (freqSrc[i % freqSrc.length] || -100) + noise(i) * 1000;
-        const scaled = ((db - minDb) / (maxDb - minDb)) * 255;
-        array[i] = Math.max(0, Math.min(255, Math.round(scaled)));
-      }
+      __fpFillByteFreqData(array, freqSrc, seed, this.minDecibels, this.maxDecibels);
     };
 
     AnalyserNode.prototype.getFloatTimeDomainData = function (array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) {
-        array[i] = (timeSrc[i % timeSrc.length] || 0) + noise(i);
-      }
+      __fpFillTimeData(array, timeSrc, seed);
     };
 
     AnalyserNode.prototype.getByteTimeDomainData = function (array) {
       report('analyser');
-      for (let i = 0; i < array.length; i++) {
-        const v = (timeSrc[i % timeSrc.length] || 0) + noise(i);
-        array[i] = Math.max(0, Math.min(255, Math.round(128 + 128 * v)));
-      }
+      __fpFillByteTimeData(array, timeSrc, seed);
     };
   }
 
