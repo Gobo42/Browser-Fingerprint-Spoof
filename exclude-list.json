@@ -27,5 +27,9 @@
   "*://www.google.com/recaptcha/*",
   "*://recaptcha.net/*",
   "*://*.recaptcha.net/*",
-  "*://*.newassets.hcaptcha.com/*"
+  "*://*.newassets.hcaptcha.com/*",
+  "*://login.aliexpress.com/*",
+  "*://*.login.aliexpress.com/*",
+  "*://login.aliexpress.us/*",
+  "*://*.login.aliexpress.us/*"
 ]
