@@ -234,8 +234,10 @@ trigger re-verification or get flagged:
   providers above, just as strong.
 - **CAPTCHA/bot-challenge widgets**: Cloudflare Turnstile
   (`challenges.cloudflare.com`), Google reCAPTCHA
-  (`google.com/recaptcha`, `recaptcha.net`), and hCaptcha
-  (`newassets.hcaptcha.com`). These run their own
+  (`google.com/recaptcha`, `recaptcha.net`), hCaptcha (`hcaptcha.com`),
+  DataDome (`captcha-delivery.com`), Arkose Labs/FunCaptcha
+  (`arkoselabs.com`), and HUMAN/PerimeterX (`captcha.px-cdn.net`).
+  These run their own
   fingerprint checks as part of the challenge itself, and unlike the other
   categories here, this isn't just extra friction: confirmed in practice
   that a spoofed fingerprint can stop the Cloudflare widget from completing
