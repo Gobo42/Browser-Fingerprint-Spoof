@@ -107,7 +107,7 @@ function synthesizePng(w, h) {
 }
 
 const data = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
-const before = JSON.parse(JSON.stringify(data)); // for the summary diff
+const before = structuredClone(data); // for the summary diff
 
 if (data.webgl) {
   const gpu = pickDifferent(GPU_POOL, { unmaskedVendor: data.webgl.unmaskedVendor, unmaskedRenderer: data.webgl.unmaskedRenderer });

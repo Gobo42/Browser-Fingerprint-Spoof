@@ -24,8 +24,7 @@
 
   window.__fpAudioHardblockApplied = true; // debug marker: if this is true but window.AudioContext isn't our FakeAudioContext later, something else overwrote it after us
 
-  const Real = window.AudioContext || window.webkitAudioContext;
-  if (!Real) return;
+  if (!window.AudioContext && !window.webkitAudioContext) return;
 
   const seed = Math.random();
   const freqSrc = base.analyserFrequencyData || [];

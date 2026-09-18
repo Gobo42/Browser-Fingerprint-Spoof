@@ -14,23 +14,15 @@ const LABELS = {
   rtc: 'WebRTC (peer connections)',
 };
 
-// Extracts the host from a pattern shaped like *://*.HOST/*, the only
-// shape the quick-action buttons produce. Manually-typed patterns of other
-// shapes just won't match here, which is fine; this is only used to detect
-// redundancy against the quick-action buttons' own output.
-function hostFromWildcardPattern(pattern) {
-  const m = /^\*:\/\/\*\.(.+)\/\*$/.exec(pattern);
-  return m ? m[1] : null;
-}
-
 // True if `host` (or any of its subdomains) is already covered by an
 // existing *://*.EXISTING/* entry in the list, e.g. "www.aliexpress.us"
 // is already covered by an existing "*://*.aliexpress.us/*" entry, since
 // that pattern's "*." already matches any subdomain including "www".
 function isHostAlreadyCovered(host, list) {
   return list.some((pattern) => {
-    const existingHost = hostFromWildcardPattern(pattern);
-    if (!existingHost) return false;
+    const match = /^\*:\/\/\*\.(.+)\/\*$/.exec(pattern);
+    if (!match) return false;
+    const existingHost = match[1];
     return host === existingHost || host.endsWith('.' + existingHost);
   });
 }
@@ -41,7 +33,7 @@ function isHostAlreadyCovered(host, list) {
 // teams.microsoft.com entries use both). Used to grey out a quick-action
 // button once it'd be a no-op.
 function isHostExcluded(host, list) {
-  return list.includes(`*://*.${host}/*`) || list.includes(`*://${host}/*`) || isHostAlreadyCovered(host, list);
+  return list.includes(`*://${host}/*`) || isHostAlreadyCovered(host, list);
 }
 
 function safeParseUrl(str) {
@@ -175,7 +167,7 @@ function updateTabLabel(btnId, baseLabel, count) {
   document.getElementById(btnId).textContent = `${baseLabel} (${count})`;
 }
 
-// True if `existingHost` is at or under `host` -- i.e. excluding `host`
+// True if `existingHost` is at or under `host`, i.e. excluding `host`
 // should also cover it (a hard-block entry for the same host, or for a
 // subdomain of it).
 function isHostWithin(existingHost, host) {
@@ -227,13 +219,77 @@ async function addOriginToList(origin, which) {
   if (!isHostAlreadyCovered(url.hostname, list)) {
     const pattern = `*://*.${url.hostname}/*`;
     if (which === 'exclude') {
-      if (!excludeList.includes(pattern)) await saveExcludeList([...excludeList, pattern]);
+      await saveExcludeList([...excludeList, pattern]);
     } else {
-      if (!hardblockList.includes(pattern)) await saveHardblockList([...hardblockList, pattern]);
+      await saveHardblockList([...hardblockList, pattern]);
     }
   }
   if (activeTab) chrome.tabs.reload(activeTab.id);
   window.close();
+}
+
+// Chrome match pattern: scheme://host/path, host being "*", "*.example.com",
+// or a plain host.
+const MATCH_PATTERN_RE = /^(\*|https?):\/\/(\*|(\*\.)?[^/*\s]+)\/\S*$/;
+
+// One import line -> a match pattern, or null if it's neither. A line with
+// "://" must already be a valid match pattern and is kept exactly, so
+// path-scoped entries like *://www.google.com/recaptcha/* survive unchanged.
+// A line with no "://" must be only a domain ("foo.com", "*.foo.com") and
+// gets wrapped in the same *://*.HOST/* shape the quick-action buttons
+// produce. A dotless host only counts when written as a wildcard ("*.gov"),
+// so stray words don't turn into entries.
+function toPattern(line) {
+  if (line.includes('://')) return MATCH_PATTERN_RE.test(line) ? line : null;
+  const wild = /^\*?\./.test(line);
+  const host = line.replace(/^\*?\./, '').toLowerCase();
+  const isDomain = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/.test(host) && (wild || host.includes('.'));
+  return isDomain ? `*://*.${host}/*` : null;
+}
+
+// File text -> { patterns, ignored } (or { error }). A JSON array of strings
+// (the same shape as exclude-list.json) or one entry per line. Lines that
+// are neither a domain nor a valid pattern are ignored, not errors.
+function parseImport(text) {
+  const trimmed = text.trim();
+  let lines;
+  if (trimmed.startsWith('[')) {
+    try { lines = JSON.parse(trimmed); } catch (e) { return { error: 'Not valid JSON.' }; }
+  } else {
+    lines = trimmed.split(/\r?\n/);
+  }
+  const patterns = [];
+  const ignored = [];
+  for (const raw of lines) {
+    // Drop a trailing " # comment" (the # must follow whitespace, so a # inside
+    // a pattern's path survives), then skip blank and whole-line comments.
+    const line = String(raw).replace(/\s+#.*$/, '').trim();
+    if (!line || line.startsWith('#')) continue;
+    const pattern = toPattern(line);
+    if (pattern) patterns.push(pattern); else ignored.push(line);
+  }
+  return { patterns, ignored };
+}
+
+// Import only ever adds: entries already in the list (or repeated in the
+// file) are skipped, nothing is removed. Goes through the same save function
+// as manual adds, so excluding via import also prunes hard-block entries.
+function wireImport({ btnId, fileId, statusId, getList, save }) {
+  const input = document.getElementById(fileId);
+  const status = document.getElementById(statusId);
+  document.getElementById(btnId).addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.value = ''; // so picking the same file again still fires change
+    if (!file) return;
+    const parsed = parseImport(await file.text());
+    if (parsed.error) { status.textContent = parsed.error; return; }
+    const existing = new Set(getList());
+    const added = [...new Set(parsed.patterns)].filter((p) => !existing.has(p));
+    if (added.length) await save([...getList(), ...added]);
+    const skipped = parsed.patterns.length - added.length;
+    status.textContent = `Added ${added.length}, skipped ${skipped} duplicate, ignored ${parsed.ignored.length}`;
+  });
 }
 
 async function init() {
@@ -292,6 +348,9 @@ async function init() {
     await saveHardblockList([...hardblockList, pattern]);
     input.value = '';
   });
+
+  wireImport({ btnId: 'importExcludeBtn', fileId: 'importExcludeFile', statusId: 'importExcludeStatus', getList: () => excludeList, save: saveExcludeList });
+  wireImport({ btnId: 'importHardblockBtn', fileId: 'importHardblockFile', statusId: 'importHardblockStatus', getList: () => hardblockList, save: saveHardblockList });
 
   setupTabs();
 }

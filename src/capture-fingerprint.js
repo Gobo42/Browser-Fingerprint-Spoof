@@ -15,7 +15,6 @@ const outputPath = path.resolve(process.argv[2] || path.join(__dirname, '..', 'f
   console.log('Launching Chrome...');
   const browser = await chromium.launch({ channel: 'chrome', headless: false });
   const page = await browser.newPage();
-  await page.goto('about:blank');
 
   const dataset = await page.evaluate(async () => {
     const dataset = {};

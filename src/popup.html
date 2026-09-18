@@ -22,6 +22,7 @@
   li button { font-size: 11px; }
   .add-row { display: flex; gap: 4px; }
   .add-row input { flex: 1; font-size: 11px; padding: 3px 4px; }
+  .add-row + .add-row { margin-top: 4px; }
   .hint { font-size: 10px; color: #888; margin-top: 6px; line-height: 1.4; }
   .empty { font-size: 11px; color: #999; padding: 4px 0; }
   .tabs { display: flex; border-bottom: 1px solid #ddd; margin-top: 14px; }
@@ -43,8 +44,8 @@
   <div id="origins"></div>
 
   <div class="tabs">
-    <button class="tab-btn active" id="tabExcludeBtn" data-tab="exclude">Excluded</button>
-    <button class="tab-btn" id="tabHardblockBtn" data-tab="hardblock">Hard-blocked</button>
+    <button class="tab-btn active" id="tabExcludeBtn">Excluded</button>
+    <button class="tab-btn" id="tabHardblockBtn">Hard-blocked</button>
   </div>
 
   <div class="tab-panel" id="excludePanel">
@@ -53,8 +54,13 @@
       <input id="newExcludePattern" placeholder="*://example.com/*">
       <button id="addExcludeBtn">Add</button>
     </div>
+    <div class="add-row">
+      <button id="importExcludeBtn">Import file...</button>
+      <input type="file" id="importExcludeFile" accept=".json,.txt,text/plain,application/json" hidden>
+    </div>
+    <div class="hint" id="importExcludeStatus"></div>
     <div class="hint">
-      No spoofing at all on these sites — real values everywhere.
+      No spoofing at all on these sites: real values everywhere.
     </div>
   </div>
 
@@ -64,19 +70,27 @@
       <input id="newHardblockPattern" placeholder="*://example.com/*">
       <button id="addHardblockBtn">Add</button>
     </div>
+    <div class="add-row">
+      <button id="importHardblockBtn">Import file...</button>
+      <input type="file" id="importHardblockFile" accept=".json,.txt,text/plain,application/json" hidden>
+    </div>
+    <div class="hint" id="importHardblockStatus"></div>
     <div class="hint">
       On these sites, real-time <code>AudioContext</code> is replaced with a
-      fake one entirely — no live audio session is ever opened, which is what
+      fake one entirely, so no live audio session is ever opened, which is what
       actually stops things like Bluetooth interference, not just the
-      fingerprint. Independent of the exclude list: a site can be spoofed,
-      excluded, hard-blocked, or any combination.
+      fingerprint. Excluding a site removes its hard-block entry.
     </div>
   </div>
 
   <div class="hint">
-    Changes take effect on the next page load in a tab — reload an open tab
+    Changes take effect on the next page load in a tab, so reload an open tab
     (or use a button above) to apply. Patterns use Chrome's match-pattern
-    syntax, e.g. <code>*://*.example.com/*</code> for all subdomains.
+    syntax, e.g. <code>*://*.example.com/*</code> for all subdomains. Import
+    takes one entry per line (a line that is just <code>example.com</code>
+    becomes <code>*://*.example.com/*</code>) or a JSON array, ignores
+    <code>#</code> comments and lines that aren't a domain or pattern, and
+    only adds.
   </div>
 
   <script src="popup.js"></script>

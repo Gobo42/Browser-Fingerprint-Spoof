@@ -312,6 +312,29 @@ are managed live from the extension's toolbar popup, no rebuild required:
   to add an arbitrary pattern by hand. Editing or removing an entry is
   keyed by the pattern's value, not its position in the list, so sorting
   for display never risks editing/removing the wrong entry.
+- Each tab also has an **Import file...** button (`parseImport`/`wireImport`
+  in `popup.js`). It reads a JSON array of strings (the seed-file shape) or
+  plain text with one entry per line. Comments are stripped first: a
+  trailing `# note` (the `#` must follow whitespace, so a `#` inside a
+  pattern's path survives) is dropped, and blank lines and whole-line
+  comments are skipped without being counted. Each remaining line is then
+  one of two things. A line containing `://` must already be a valid
+  match pattern and is kept exactly (so path-scoped entries such as
+  `*://www.google.com/recaptcha/*` survive). A line without `://` must be
+  only a domain (`example.com`, `*.example.com`) and is wrapped as
+  `*://*.HOST/*`, the same shape the quick-action buttons produce (a
+  dotless host counts only as an explicit wildcard, `*.gov`). Anything
+  else, such as `example.com/path` or `example.com:8080`, is ignored and
+  only counted in the result, not treated as an error. Filtering matters
+  more here than for the manual field: an invalid pattern makes
+  `chrome.scripting.registerContentScripts` throw, and `background.js` never
+  answers the save message in that case, so one bad line in a bulk file
+  would otherwise leave the whole list unsaved. Import only adds (entries
+  already present or repeated in the file are skipped, nothing is removed)
+  and saves through the same `saveExcludeList`/`saveHardblockList` as manual
+  adds, so importing into the exclude list also prunes matching hard-block
+  entries. The result (added, duplicate, ignored counts) shows under the
+  button.
 - The toolbar icon's badge shows the running total across all origins on
   the active tab.
 

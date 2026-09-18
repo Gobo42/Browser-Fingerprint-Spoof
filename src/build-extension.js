@@ -31,7 +31,7 @@ if (!inputArg) {
 
 function resolveListPaths(arg, defaultPath) {
   const raw = arg || defaultPath;
-  return raw.split(',').map((p) => path.resolve(p.trim())).filter(Boolean);
+  return raw.split(',').map((p) => path.resolve(p.trim()));
 }
 
 const inputPath = path.resolve(inputArg);
@@ -94,31 +94,21 @@ const analyserHelpers = fs.readFileSync(path.join(TEMPLATES_DIR, 'analyser-fake.
 // before they patch anything.
 const privateHostGuard = fs.readFileSync(path.join(TEMPLATES_DIR, 'private-host-guard.snippet.js'), 'utf8');
 
-const contentTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'content.template.js'), 'utf8');
-fs.writeFileSync(
-  path.join(outputDir, 'content.js'),
-  contentTemplate
-    .replace('__FP_DATASET__', JSON.stringify(dataset))
-    .replace(/__FP_CHANNEL__/g, channel)
-    .replace('__FP_ANALYSER_HELPERS__', analyserHelpers)
-    .replace('__FP_PRIVATE_HOST_GUARD__', privateHostGuard)
-);
+function renderTemplate(templateName, outputName, replacements) {
+  let source = fs.readFileSync(path.join(TEMPLATES_DIR, templateName), 'utf8');
+  for (const [token, value] of Object.entries(replacements)) source = source.replaceAll(token, value);
+  fs.writeFileSync(path.join(outputDir, outputName), source);
+}
 
-const bridgeTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'bridge.template.js'), 'utf8');
-fs.writeFileSync(
-  path.join(outputDir, 'bridge.js'),
-  bridgeTemplate.replace(/__FP_CHANNEL__/g, channel)
-);
-
-const hardblockTemplate = fs.readFileSync(path.join(TEMPLATES_DIR, 'audio-hardblock.template.js'), 'utf8');
-fs.writeFileSync(
-  path.join(outputDir, 'audio-hardblock.js'),
-  hardblockTemplate
-    .replace('__FP_DATASET__', JSON.stringify(dataset))
-    .replace(/__FP_CHANNEL__/g, channel)
-    .replace('__FP_ANALYSER_HELPERS__', analyserHelpers)
-    .replace('__FP_PRIVATE_HOST_GUARD__', privateHostGuard)
-);
+const mainWorldReplacements = {
+  __FP_DATASET__: JSON.stringify(dataset),
+  __FP_CHANNEL__: channel,
+  __FP_ANALYSER_HELPERS__: analyserHelpers,
+  __FP_PRIVATE_HOST_GUARD__: privateHostGuard,
+};
+renderTemplate('content.template.js', 'content.js', mainWorldReplacements);
+renderTemplate('bridge.template.js', 'bridge.js', { __FP_CHANNEL__: channel });
+renderTemplate('audio-hardblock.template.js', 'audio-hardblock.js', mainWorldReplacements);
 
 console.log(`Extension built -> ${outputDir}`);
 console.log('Load it via chrome://extensions (or edge://extensions, brave://extensions) -> Developer mode -> Load unpacked.');

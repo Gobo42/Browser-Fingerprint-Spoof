@@ -197,6 +197,15 @@ subdomains), since "real values everywhere" and "actively fake
 `AudioContext`" contradict each other; hard-blocking a site doesn't remove
 an exclude entry the other way around.
 
+Each list has an **Import file...** button that adds entries in bulk from a
+`.txt` (one entry per line) or `.json` (an array, same shape as the seed
+files) file. A line that is just a domain (`example.com`) becomes
+`*://*.example.com/*`; a line with `://` must already be a valid match
+pattern and is kept as written. Blank lines, lines starting with `#`, a
+trailing ` # note` after an entry, and any line that isn't a domain or a
+valid pattern are ignored. Import only adds: duplicates are skipped, and
+nothing is removed.
+
 The popup also shows a live "Activity on this page" breakdown: which
 fingerprinting APIs have actually been called on the current tab, broken
 down per origin (including iframes), with quick Exclude/Hard-block
