@@ -41,18 +41,28 @@ async function getStoredList(storageKey, seedFile) {
 const getExcludeList = () => getStoredList('excludeList', 'exclude-list.json');
 const getHardblockList = () => getStoredList('hardblockList', 'hardblock-list.json');
 
-async function registerOrUpdate(defs) {
-  // Try register first, fall back to update if it's already registered.
-  // (Checking "is it registered?" first and branching on that is a TOCTOU
-  // race: if init() ever runs twice concurrently, both calls can see "not
-  // registered yet" and both attempt to register, and the second throws
-  // "Duplicate script ID". Try/catch here makes this idempotent regardless
-  // of how many times or how close together it's called.)
-  try {
-    await chrome.scripting.registerContentScripts(defs);
-  } catch (e) {
-    await chrome.scripting.updateContentScripts(defs);
-  }
+// Every registration change runs through this chain, one at a time.
+// onInstalled and onStartup can both fire on one launch, and a popup save
+// can land mid-init; overlapping calls would otherwise have one register a
+// script while another tries to update it before Chrome has finished
+// registering it ("does not exist or is not fully registered"). Serialized,
+// asking Chrome what's registered right now is reliable.
+let registrationQueue = Promise.resolve();
+function serialized(fn) {
+  const run = registrationQueue.then(fn);
+  registrationQueue = run.catch(() => {});
+  return run;
+}
+
+function registerOrUpdate(defs) {
+  return serialized(async () => {
+    const ids = defs.map((d) => d.id);
+    const existing = new Set((await chrome.scripting.getRegisteredContentScripts({ ids })).map((s) => s.id));
+    const toUpdate = defs.filter((d) => existing.has(d.id));
+    const toRegister = defs.filter((d) => !existing.has(d.id));
+    if (toUpdate.length) await chrome.scripting.updateContentScripts(toUpdate);
+    if (toRegister.length) await chrome.scripting.registerContentScripts(toRegister);
+  });
 }
 
 async function registerSpoofScripts(excludeMatches) {
@@ -80,12 +90,11 @@ async function registerSpoofScripts(excludeMatches) {
 async function registerHardblockScript(matches) {
   if (!matches.length) {
     // registerContentScripts rejects an empty matches array, and there's
-    // nothing to block anyway, unregister instead (no-op, wrapped in
-    // try/catch, if it was never registered in the first place).
-    try {
-      await chrome.scripting.unregisterContentScripts({ ids: [HARDBLOCK_ID] });
-    } catch (e) {}
-    return;
+    // nothing to block anyway, so unregister instead (if it's registered).
+    return serialized(async () => {
+      const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [HARDBLOCK_ID] });
+      if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [HARDBLOCK_ID] });
+    });
   }
   await registerOrUpdate([
     {
